@@ -50,7 +50,6 @@ class Driver extends EventEmitter {
         };
         this.orderId = driverId;
         this.client;
-        this.online = false;
         this.connected = false;
         this.track;
         this.loopId = 0;
@@ -79,34 +78,38 @@ class Driver extends EventEmitter {
     }
 
     sendMydata() {
+        // set next Latitude
         this.locationInfo.mLatitude = this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat;
+        // set next Longitude
         this.locationInfo.mLongitude = this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon;
+        // set current unix time in milliseconds
         this.locationInfo.mTime = Date.now();
-        let message = `{
-            "appInfo": ${JSON.stringify(this.appInfo)},
-            "city": "${this.city}",
-            "deviceInfo": {
-                "batteryInfo": ${JSON.stringify(this.batteryInfo)},
-                "timeStamp": "2019-01-07T20:31:33+0530"
+        // construct a message
+        let message = {
+            appInfo: this.appInfo,
+            city: this.city,
+            deviceInfo: {
+                batteryInfo: this.batteryInfo,
+                timeStamp: "2019-01-07T20:31:33+0530"
             },
-            "deviceTimeStamp": "2019-01-07T20:31:33+0530",
-            "driverId": "${this.driverId}",
-            "locationInfo": ${JSON.stringify(this.locationInfo)},
-            "online": ${this.online},
-            "orderId": "${this.orderId}",
-            "seqId": ${this.seqId},
-            "stopId": "261933",
-            "tripDistance": 37.92267990112305,
-            "tripId": "768018",
-            "tripStatus": "In-Progress",
-            "vehicleInfo": ${JSON.stringify(this.vehicleInfo)}
-        }`;
+            deviceTimeStamp: "2019-01-07T20:31:33+0530",
+            driverId: this.driverId,
+            locationInfo: this.locationInfo,
+            online: this.connected,
+            orderId: this.orderId,
+            seqId: this.seqId,
+            stopId: "261933",
+            tripDistance: 37.92267990112305,
+            tripId: "768018",
+            tripStatus: "In-Progress",
+            vehicleInfo: this.vehicleInfo
+        };
         if (this.loopId !== this.track.gpx.trk.trkseg.trkpt.length - 1)
             this.loopId++;
         else {
             this.loopId = 0;
         }
-        return message;
+        return JSON.stringify(message);
     }
 
     connect() {
