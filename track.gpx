@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<gpx creator="WTracks" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.topografix.com/GPX/1/1" version="1.1" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+  <name>New Track</name>
+  <desc></desc>
+  <author><name>WTracks</name></author>
+  <link href='https://opoto.github.io/wtracks/'>
+    <text>WTracks</text>
+    <type>text/html</type>
+  </link>
+  <time>2019-01-07T23:01:47.352Z</time>
+  <bounds minlat="4.872047700241915" minlon="51.15234375" maxlat="39.50404070558415" maxlon="135.52734375000003"/>
+</metadata>
+<trk><name>New Track</name>
+  <trkseg>
+    <trkpt lat="10.487811882056695" lon="77.69531250000001"></trkpt>
+    <trkpt lat="23.684774166883756" lon="82.52929687500001"><ele>632</ele></trkpt>
+    <trkpt lat="25.045792240303445" lon="75.14648437500001"></trkpt>
+    <trkpt lat="21.04349121680354" lon="78.17871093750001"><ele>302</ele></trkpt>
+    <trkpt lat="15.876809064146771" lon="76.72851562500001"><ele>430</ele></trkpt>
+    <trkpt lat="20.50935458871459" lon="83.45214843750001"><ele>161</ele></trkpt>
+    <trkpt lat="21.248422235627014" lon="74.88281250000001"></trkpt>
+  </trkseg>
+</trk></gpx>

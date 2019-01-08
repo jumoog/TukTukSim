@@ -1,12 +1,18 @@
 const EventEmitter = require('events');
 const mqtt = require('mqtt');
 const timeout = ms => new Promise(res => setTimeout(res, ms));
-
+const convert = require('xml-js');
+const options = {
+    ignoreComment: true,
+    ignoreDeclaration: true,
+    compact: true
+};
 
 class Driver extends EventEmitter {
     constructor(driverId) {
         super();
         this.on('sendInterval', this.sendInterval);
+        this.on('connect', this.connect);
         this.locationInfo = {
             mAccuracy: 800.0,
             mAltitude: 0.0,
@@ -14,12 +20,12 @@ class Driver extends EventEmitter {
             mBearingAccuracyDegrees: 0.0,
             mElapsedRealtimeNanos: 81584532000000,
             mGeoPoint: "28708956,77099433",
-            mLatitude: 28.7089568,
-            mLongitude: 77.0994331,
+            mLatitude: 0,
+            mLongitude: 0,
             mProvider: "fused",
             mSpeed: 0.0,
             mSpeedAccuracyMetersPerSecond: 0.0,
-            mTime: 1546873293366,
+            mTime: 0,
             mVerticalAccuracyMeters: 0.0
         };
         this.appInfo = {
@@ -46,6 +52,8 @@ class Driver extends EventEmitter {
         this.client;
         this.online = false;
         this.connected = false;
+        this.track;
+        this.loopId = 0;
         this.seqId = 163;
     }
 
@@ -71,6 +79,9 @@ class Driver extends EventEmitter {
     }
 
     sendMydata() {
+        this.locationInfo.mLatitude = this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat;
+        this.locationInfo.mLongitude = this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon;
+        this.locationInfo.mTime = Date.now();
         let message = `{
             "appInfo": ${JSON.stringify(this.appInfo)},
             "city": "${this.city}",
@@ -90,6 +101,11 @@ class Driver extends EventEmitter {
             "tripStatus": "In-Progress",
             "vehicleInfo": ${JSON.stringify(this.vehicleInfo)}
         }`;
+        if (this.loopId !== this.track.gpx.trk.trkseg.trkpt.length - 1)
+            this.loopId++;
+        else {
+            this.loopId = 0;
+        }
         return message;
     }
 
@@ -104,10 +120,17 @@ class Driver extends EventEmitter {
         }
     }
 
+    loadtrack(file) {
+        let xml = require('fs').readFileSync(`${__dirname}/${file}`, 'utf8');
+        this.track = convert.xml2js(xml, options);
+        console.log(`loaded track: ${this.track.gpx.trk.name._text}`);
+        this.emit('connect');
+    }
+
     async sendInterval() {
         this.client.publish(`innvois/driver/${this.driverId}`, this.sendMydata());
-        // wait 5 seconds
-        await timeout(5000);
+        // wait 1 seconds
+        await timeout(1000);
         this.emit('sendInterval');
     }
 }
