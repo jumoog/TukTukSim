@@ -53,7 +53,7 @@ class Driver extends EventEmitter {
         this.connected = false;
         this.track;
         this.loopId = 0;
-        this.seqId = 163;
+        this.seqId = 0;
     }
 
     updateData(data) {
@@ -78,12 +78,15 @@ class Driver extends EventEmitter {
     }
 
     sendMydata() {
+        // increment seqId
+        this.seqId++;
         // set next Latitude
-        this.locationInfo.mLatitude = this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat;
+        this.locationInfo.mLatitude = parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat);
         // set next Longitude
-        this.locationInfo.mLongitude = this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon;
+        this.locationInfo.mLongitude = parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon);
         // set current unix time in milliseconds
         this.locationInfo.mTime = Date.now();
+        console.log(`Latitude: <${this.locationInfo.mLatitude}> mLongitude: <${this.locationInfo.mLongitude}> Driver: <${this.driverId}>`);
         // construct a message
         let message = {
             appInfo: this.appInfo,
@@ -131,7 +134,7 @@ class Driver extends EventEmitter {
     }
 
     async sendInterval() {
-        this.client.publish(`innvois/driver/${this.driverId}`, this.sendMydata());
+        this.client.publish(`innovis/driver/${this.driverId}`, this.sendMydata());
         // wait 1 seconds
         await timeout(1000);
         this.emit('sendInterval');
