@@ -14,7 +14,7 @@ class Driver extends EventEmitter {
         this.on('sendInterval', this.sendInterval);
         this.on('connect', this.connect);
         this.locationInfo = {
-            mAccuracy: 800.0,
+            mAccuracy: 1.0,
             mAltitude: 0.0,
             mBearing: 0.0,
             mBearingAccuracyDegrees: 0.0,
@@ -36,7 +36,7 @@ class Driver extends EventEmitter {
         this.batteryInfo = {
             LastChargingPluggedDateTime: "2018-11-16T22:33:18+0530",
             LastChargingUnPluggedDateTime: "",
-            batteryLevel: 32,
+            batteryLevel: 100,
             chargingStatus: false,
             significantLevel: "LOW",
             significantLowLevelDateTime: "2018-11-19T17:55:52+0530",
@@ -54,6 +54,8 @@ class Driver extends EventEmitter {
         this.track;
         this.loopId = 0;
         this.seqId = 0;
+        this.tripDistance = 0.0;
+        this.driveBack = false;
     }
 
     updateData(data) {
@@ -80,37 +82,51 @@ class Driver extends EventEmitter {
     sendMydata() {
         // increment seqId
         this.seqId++;
+        if (this.seqId > 1) {
+            let calc = this.distanceInKmBetweenEarthCoordinates(this.locationInfo.mLatitude,this.locationInfo.mLongitude, this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat, this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon);
+            this.tripDistance = this.tripDistance + calc;
+            console.log(`Distance: <${calc}> KM / TripDistance: <${this.tripDistance}>`);
+        }
         // set next Latitude
         this.locationInfo.mLatitude = parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat);
         // set next Longitude
         this.locationInfo.mLongitude = parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon);
         // set current unix time in milliseconds
         this.locationInfo.mTime = Date.now();
-        console.log(`Latitude: <${this.locationInfo.mLatitude}> mLongitude: <${this.locationInfo.mLongitude}> Driver: <${this.driverId}>`);
+        let timeNow = new Date().toISOString();
+
+        console.log(`Latitude: <${this.locationInfo.mLatitude}> Longitude: <${this.locationInfo.mLongitude}> Driver: <${this.driverId}>`);
         // construct a message
         let message = {
             appInfo: this.appInfo,
             city: this.city,
             deviceInfo: {
                 batteryInfo: this.batteryInfo,
-                timeStamp: "2019-01-07T20:31:33+0530"
+                timeStamp: timeNow
             },
-            deviceTimeStamp: "2019-01-07T20:31:33+0530",
+            deviceTimeStamp: timeNow,
             driverId: this.driverId,
             locationInfo: this.locationInfo,
             online: this.connected,
             orderId: this.orderId,
             seqId: this.seqId,
             stopId: "261933",
-            tripDistance: 37.92267990112305,
+            tripDistance: this.tripDistance,
             tripId: "768018",
             tripStatus: "In-Progress",
             vehicleInfo: this.vehicleInfo
         };
-        if (this.loopId !== this.track.gpx.trk.trkseg.trkpt.length - 1)
+        if (this.driveBack) {
+            if (this.loopId !== 0) {
+                this.loopId--;
+            } else {
+                this.driveBack = false;
+            }
+        }
+        else if (this.loopId !== this.track.gpx.trk.trkseg.trkpt.length - 1 && !this.driveBack) {
             this.loopId++;
-        else {
-            this.loopId = 0;
+        } else {
+            this.driveBack = true;
         }
         return JSON.stringify(message);
     }
@@ -138,6 +154,25 @@ class Driver extends EventEmitter {
         // wait 1 seconds
         await timeout(1000);
         this.emit('sendInterval');
+    }
+
+    degreesToRadians(degrees) {
+        return degrees * Math.PI / 180;
+    }
+
+    distanceInKmBetweenEarthCoordinates(lat1, lon1, lat2, lon2) {
+        var earthRadiusKm = 6371;
+      
+        var dLat = this.degreesToRadians(lat2-lat1);
+        var dLon = this.degreesToRadians(lon2-lon1);
+      
+        lat1 = this.degreesToRadians(lat1);
+        lat2 = this.degreesToRadians(lat2);
+      
+        var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2); 
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+        return earthRadiusKm * c;
     }
 }
 
