@@ -1,0 +1,24 @@
+{
+  "name": "tuktuksim",
+  "version": "1.0.0",
+  "description": "",
+  "main": "App.js",
+  "dependencies": {
+    "mqtt": "^2.18.8",
+    "xml-js": "^1.6.8"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jumoog/TukTukSim.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jumoog/TukTukSim/issues"
+  },
+  "homepage": "https://github.com/jumoog/TukTukSim#readme"
+}
