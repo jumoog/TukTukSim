@@ -7,6 +7,7 @@ const options = {
     ignoreDeclaration: true,
     compact: true
 };
+const earthRadiusKm = 6371;
 
 class Driver extends EventEmitter {
     constructor(driverId) {
@@ -56,41 +57,30 @@ class Driver extends EventEmitter {
         this.seqId = 0;
         this.tripDistance = 0.0;
         this.driveBack = false;
-    }
-
-    updateData(data) {
-        this.deviceInfo = data.deviceInfo;
-        this.appInfo = data.appInfo;
-    }
-
-    updateCity(data) {
-        this.city = data.city;
-    }
-
-    updatevehicleInfo(data) {
-        this.vehicleInfo = data.vehicleInfo;
-    }
-
-    updateLoction(data) {
-        this.locationInfo = data.locationInfo;
-    }
-
-    updatebatteryInfo(data) {
-        this.locationInfo = data.locationInfo;
+        this.next;
+        this.calc = false;
     }
 
     sendMydata() {
         // increment seqId
         this.seqId++;
+
         if (this.seqId > 1) {
-            let calc = this.distanceInKmBetweenEarthCoordinates(this.locationInfo.mLatitude,this.locationInfo.mLongitude, this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat, this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon);
+            this.next = this.checkIfNextPointIsClose(this.locationInfo.mLatitude, this.locationInfo.mLongitude, this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat, this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon);
+            let calc = this.distanceInKmBetweenEarthCoordinates(this.locationInfo.mLatitude, this.locationInfo.mLongitude, this.next.mLatitude, this.next.mLongitude);
             this.tripDistance = this.tripDistance + calc;
             console.log(`Distance: <${calc}> KM / TripDistance: <${this.tripDistance}>`);
+            // set next Latitude
+            this.locationInfo.mLatitude = this.next.mLatitude;
+            // set next Longitude
+            this.locationInfo.mLongitude = this.next.mLongitude;
+        } else {
+            // set next Latitude
+            this.locationInfo.mLatitude = parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat);
+            // set next Longitude
+            this.locationInfo.mLongitude = parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon);
         }
-        // set next Latitude
-        this.locationInfo.mLatitude = parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat);
-        // set next Longitude
-        this.locationInfo.mLongitude = parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon);
+
         // set current unix time in milliseconds
         this.locationInfo.mTime = Date.now();
         let timeNow = new Date().toISOString();
@@ -118,13 +108,17 @@ class Driver extends EventEmitter {
         };
         if (this.driveBack) {
             if (this.loopId !== 0) {
-                this.loopId--;
+                if (!this.calc) {
+                    this.loopId--;
+                }
             } else {
                 this.driveBack = false;
             }
         }
         else if (this.loopId !== this.track.gpx.trk.trkseg.trkpt.length - 1 && !this.driveBack) {
-            this.loopId++;
+            if (!this.calc) {
+                this.loopId++;
+            }
         } else {
             this.driveBack = true;
         }
@@ -156,23 +150,58 @@ class Driver extends EventEmitter {
         this.emit('sendInterval');
     }
 
+    checkIfNextPointIsClose(lat1, lon1, lat2, lon2) {
+        if (this.distanceInKmBetweenEarthCoordinates(lat1, lon1, lat2, lon2) > 2) {
+            let bearing = this.bearingInitial(lat1, lon1, lat2, lon2);
+            console.log(`Slow down Driver: <${this.driverId}>`);
+            this.calc = true;
+            return this.calculateNewPostionFromBearingDistance(lat1, lon1, bearing, 2);
+        }
+        else {
+            this.calc = false;
+            return { mLatitude: lat2, mLongitude: lon2 };
+        }
+    }
+
     degreesToRadians(degrees) {
         return degrees * Math.PI / 180;
     }
 
     distanceInKmBetweenEarthCoordinates(lat1, lon1, lat2, lon2) {
-        var earthRadiusKm = 6371;
-      
-        var dLat = this.degreesToRadians(lat2-lat1);
-        var dLon = this.degreesToRadians(lon2-lon1);
-      
+        let dLat = this.degreesToRadians(lat2 - lat1);
+        let dLon = this.degreesToRadians(lon2 - lon1);
+
         lat1 = this.degreesToRadians(lat1);
         lat2 = this.degreesToRadians(lat2);
-      
-        var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(lat1) * Math.cos(lat2); 
-        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+
+        let a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+        let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return earthRadiusKm * c;
+    }
+
+    bearingInitial(lat1, long1, lat2, long2) {
+        return (this.bearingDegrees(lat1, long1, lat2, long2) + 360) % 360;
+    }
+
+    bearingDegrees(lat1, long1, lat2, long2) {
+        let phi1 = this.degreesToRadians(lat1);
+        let phi2 = this.degreesToRadians(lat2);
+        let lam1 = this.degreesToRadians(long1);
+        let lam2 = this.degreesToRadians(long2);
+
+        return Math.atan2(Math.sin(lam2 - lam1) * Math.cos(phi2),
+
+            Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(lam2 - lam1)
+
+        ) * 180 / Math.PI;
+    }
+
+    calculateNewPostionFromBearingDistance(lat, lng, bearing, distance) {
+        let lat2 = Math.asin(Math.sin(Math.PI / 180 * lat) * Math.cos(distance / earthRadiusKm) + Math.cos(Math.PI / 180 * lat) * Math.sin(distance / earthRadiusKm) * Math.cos(Math.PI / 180 * bearing));
+        let lon2 = Math.PI / 180 * lng + Math.atan2(Math.sin(Math.PI / 180 * bearing) * Math.sin(distance / earthRadiusKm) * Math.cos(Math.PI / 180 * lat), Math.cos(distance / earthRadiusKm) - Math.sin(Math.PI / 180 * lat) * Math.sin(lat2));
+
+        return { mLatitude: 180 / Math.PI * lat2, mLongitude: 180 / Math.PI * lon2 };
     }
 }
 
