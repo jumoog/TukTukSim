@@ -8,7 +8,7 @@ const options = {
     compact: true
 };
 const earthRadiusKm = 6371;
-
+const refreshRate = 2; // sekunden
 class Driver extends EventEmitter {
     constructor(driverId) {
         super();
@@ -24,7 +24,7 @@ class Driver extends EventEmitter {
             mLatitude: 0,
             mLongitude: 0,
             mProvider: "fused",
-            mSpeed: 0.0,
+            mSpeed: 40.0, //km/h
             mSpeedAccuracyMetersPerSecond: 0.0,
             mTime: 0,
             mVerticalAccuracyMeters: 0.0
@@ -66,7 +66,7 @@ class Driver extends EventEmitter {
         this.seqId++;
 
         if (this.seqId > 1) {
-            this.next = this.checkIfNextPointIsClose(this.locationInfo.mLatitude, this.locationInfo.mLongitude, this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat, this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon);
+            this.next = this.checkIfNextPointIsClose(this.locationInfo.mLatitude, this.locationInfo.mLongitude, parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat), parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon));
             let calc = this.distanceInKmBetweenEarthCoordinates(this.locationInfo.mLatitude, this.locationInfo.mLongitude, this.next.mLatitude, this.next.mLongitude);
             this.tripDistance = this.tripDistance + calc;
             console.log(`Distance: <${calc}> KM / TripDistance: <${this.tripDistance}>`);
@@ -114,8 +114,7 @@ class Driver extends EventEmitter {
             } else {
                 this.driveBack = false;
             }
-        }
-        else if (this.loopId !== this.track.gpx.trk.trkseg.trkpt.length - 1 && !this.driveBack) {
+        } else if (this.loopId !== this.track.gpx.trk.trkseg.trkpt.length - 1 && !this.driveBack) {
             if (!this.calc) {
                 this.loopId++;
             }
@@ -129,7 +128,6 @@ class Driver extends EventEmitter {
         if (!this.connected) {
             this.connected = true;
             this.client = mqtt.connect('mqtt://broker.hivemq.com');
-
             this.client.on('connect', () => {
                 this.emit('sendInterval');
             });
@@ -146,63 +144,69 @@ class Driver extends EventEmitter {
     async sendInterval() {
         this.client.publish(`innovis/driver/${this.driverId}`, this.sendMydata());
         // wait 1 seconds
-        await timeout(1000);
+        await timeout(refreshRate * 1000);
         this.emit('sendInterval');
     }
 
     checkIfNextPointIsClose(lat1, lon1, lat2, lon2) {
-        if (this.distanceInKmBetweenEarthCoordinates(lat1, lon1, lat2, lon2) > 2) {
-            let bearing = this.bearingInitial(lat1, lon1, lat2, lon2);
+        this.locationInfo.mBearing = this.getBearing(lat1, lon1, lat2, lon2);
+
+        let distance = this.locationInfo.mSpeed / 3600 * refreshRate;
+
+        if (this.distanceInKmBetweenEarthCoordinates(lat1, lon1, lat2, lon2) > distance) {
             console.log(`Slow down Driver: <${this.driverId}>`);
             this.calc = true;
-            return this.calculateNewPostionFromBearingDistance(lat1, lon1, bearing, 2);
-        }
-        else {
+            return this.calculateNewPostionFromBearingDistance(lat1, lon1, this.locationInfo.mBearing, distance);
+        } else {
             this.calc = false;
-            return { mLatitude: lat2, mLongitude: lon2 };
+            return {
+                mLatitude: lat2,
+                mLongitude: lon2
+            };
         }
     }
 
-    degreesToRadians(degrees) {
+    toRadians(degrees) {
         return degrees * Math.PI / 180;
     }
 
+    toDegrees(radians) {
+        return radians * 180 / Math.PI;
+    }
     distanceInKmBetweenEarthCoordinates(lat1, lon1, lat2, lon2) {
-        let dLat = this.degreesToRadians(lat2 - lat1);
-        let dLon = this.degreesToRadians(lon2 - lon1);
-
-        lat1 = this.degreesToRadians(lat1);
-        lat2 = this.degreesToRadians(lat2);
-
+        let dLat = this.toRadians(lat2 - lat1);
+        let dLon = this.toRadians(lon2 - lon1);
+        lat1 = this.toRadians(lat1);
+        lat2 = this.toRadians(lat2);
         let a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
             Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
         let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return earthRadiusKm * c;
     }
 
-    bearingInitial(lat1, long1, lat2, long2) {
-        return (this.bearingDegrees(lat1, long1, lat2, long2) + 360) % 360;
-    }
-
-    bearingDegrees(lat1, long1, lat2, long2) {
-        let phi1 = this.degreesToRadians(lat1);
-        let phi2 = this.degreesToRadians(lat2);
-        let lam1 = this.degreesToRadians(long1);
-        let lam2 = this.degreesToRadians(long2);
-
-        return Math.atan2(Math.sin(lam2 - lam1) * Math.cos(phi2),
-
-            Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(lam2 - lam1)
-
-        ) * 180 / Math.PI;
+    getBearing(startLat, startLong, endLat, endLong) {
+        startLat = this.toRadians(startLat);
+        startLong = this.toRadians(startLong);
+        endLat = this.toRadians(endLat);
+        endLong = this.toRadians(endLong);
+        var dLong = endLong - startLong;
+        var dPhi = Math.log(Math.tan(endLat / 2.0 + Math.PI / 4.0) / Math.tan(startLat / 2.0 + Math.PI / 4.0));
+        if (Math.abs(dLong) > Math.PI) {
+            if (dLong > 0.0)
+                dLong = -(2.0 * Math.PI - dLong);
+            else
+                dLong = (2.0 * Math.PI + dLong);
+        }
+        return (this.toDegrees(Math.atan2(dLong, dPhi)) + 360.0) % 360.0;
     }
 
     calculateNewPostionFromBearingDistance(lat, lng, bearing, distance) {
         let lat2 = Math.asin(Math.sin(Math.PI / 180 * lat) * Math.cos(distance / earthRadiusKm) + Math.cos(Math.PI / 180 * lat) * Math.sin(distance / earthRadiusKm) * Math.cos(Math.PI / 180 * bearing));
         let lon2 = Math.PI / 180 * lng + Math.atan2(Math.sin(Math.PI / 180 * bearing) * Math.sin(distance / earthRadiusKm) * Math.cos(Math.PI / 180 * lat), Math.cos(distance / earthRadiusKm) - Math.sin(Math.PI / 180 * lat) * Math.sin(lat2));
-
-        return { mLatitude: 180 / Math.PI * lat2, mLongitude: 180 / Math.PI * lon2 };
+        return {
+            mLatitude: 180 / Math.PI * lat2,
+            mLongitude: 180 / Math.PI * lon2
+        };
     }
 }
-
 module.exports = Driver;
