@@ -7,8 +7,222 @@ const options = {
     ignoreDeclaration: true,
     compact: true
 };
+const myArray = ["Kavaratti",
+    "New Delhi",
+    "Tezpur",
+    "Jullundur",
+    "Navsari",
+    "Asansol",
+    "Port Blair",
+    "Kota",
+    "Saharanpur",
+    "Bhuj",
+    "Gurgaon",
+    "Simla",
+    "Muzaffarpur",
+    "Gaya",
+    "Ratlam",
+    "Gwalior",
+    "Baramula",
+    "Guwahati",
+    "Dispur",
+    "Bidar",
+    "Pune",
+    "Ahmedabad",
+    "Haldia",
+    "Bhagalpur",
+    "Ujjain",
+    "Tonk",
+    "Agartala",
+    "Silchar",
+    "Vellore",
+    "Bharatpur",
+    "Siliguri",
+    "Gangtok",
+    "Cuttack",
+    "Alipur Duar",
+    "Bhubaneshwar",
+    "Dibrugarh",
+    "Jorhat",
+    "Hospet",
+    "Tuticorin",
+    "Sangli",
+    "Sholapur",
+    "Mumbai",
+    "Diu",
+    "Sirsa",
+    "Mangalore",
+    "Thiruvananthapuram",
+    "Kochi",
+    "Bangalore",
+    "Proddatur",
+    "Tirupati",
+    "Vadodara",
+    "Surat",
+    "Aizawl",
+    "Bhopal",
+    "Hyderabad",
+    "Chandigarh",
+    "Gandhinagar",
+    "Imphal",
+    "Kohima",
+    "Lucknow",
+    "Bijapur",
+    "Chennai",
+    "Guntur",
+    "Rajahmundry",
+    "Haora",
+    "Raurkela",
+    "Dhanbad",
+    "Bhatpara",
+    "Kolkata",
+    "Shillong",
+    "Puri",
+    "Krishnanagar",
+    "Jamshedpur",
+    "Jodhpur",
+    "Sikar",
+    "Barddhaman",
+    "Medinipur",
+    "Vishakhapatnam",
+    "Silvassa",
+    "Kolhapur",
+    "Latur",
+    "Pondicherry",
+    "Brahmapur",
+    "Bhiwandi",
+    "Rajkot",
+    "Kalyan",
+    "Coimbatore",
+    "Nasik",
+    "Porbandar",
+    "Parbhani",
+    "Akola",
+    "Ahmednagar",
+    "Aurangabad",
+    "Daman",
+    "Ranchi",
+    "Itanagar",
+    "Raipur",
+    "Kozhikode",
+    "Machilipatnam",
+    "Khammam",
+    "Kakinada",
+    "Panaji",
+    "Bhavnagar",
+    "Karnal",
+    "Rohtak",
+    "Hisar",
+    "Abohar",
+    "Agra",
+    "Alwar",
+    "Bhilwara",
+    "Udaipur",
+    "Meerut",
+    "Delhi",
+    "Rampur",
+    "Ludhiana",
+    "Sonipat",
+    "Dehra Dun",
+    "Ghaziabad",
+    "Faridabad",
+    "Amravati",
+    "Bhiwani",
+    "Gulbarga",
+    "Mathura",
+    "Hapur",
+    "Bhilai",
+    "Warangal",
+    "Raichur",
+    "Firozabad",
+    "Burhanpur",
+    "Ambala",
+    "Varanasi",
+    "Hathras",
+    "Shahjahanpur",
+    "Jabalpur",
+    "Patiala",
+    "Nagpur",
+    "Bulandshahr",
+    "Nanded",
+    "Hoshiarpur",
+    "Aligarh",
+    "Mirzapur",
+    "Bikaner",
+    "Srinagar",
+    "Jhansi",
+    "Fatehpur",
+    "Sagar",
+    "Bahraich",
+    "Kanpur",
+    "Gorakhpur",
+    "Jammu",
+    "Nizamabad",
+    "Faizabad",
+    "Sopore",
+    "Allahabad",
+    "Sambalpur",
+    "Pathankot",
+    "Bilaspur",
+    "Indore",
+    "Sitapur",
+    "Malegaon",
+    "Dhule",
+    "Panipat",
+    "Muzaffarnagar",
+    "Ongole",
+    "Jaipur",
+    "Moradabad",
+    "Pali",
+    "Vijayawada",
+    "Budaun",
+    "Bareilly",
+    "Aurangabad",
+    "Vizianagaram",
+    "Chirala",
+    "Ajmer",
+    "Pilibhit",
+    "Hindupur",
+    "Mandya",
+    "Karimnagar",
+    "Tumkur",
+    "Mysore",
+    "Hubli",
+    "Shimoga",
+    "Chandrapur",
+    "Bellary",
+    "Davangere",
+    "Amritsar",
+    "Belgaum",
+    "Etawah",
+    "Patna",
+    "Purnia",
+    "Bhusawal",
+    "Nandyal",
+    "Kurnool",
+    "Kolar",
+    "Nellore",
+    "Tiruvannamalai",
+    "Kanchipuram",
+    "Valparai",
+    "Tiruppur",
+    "Alappuzha",
+    "Kollam",
+    "Karur",
+    "Kumbakonam",
+    "Thanjavur",
+    "Nagercoil",
+    "Tirunelveli",
+    "Rajapalaiyam",
+    "Salem",
+    "Tiruchirappalli",
+    "Madurai",
+    "Cuddalore",
+    "Dindigul"
+];
+
 const earthRadiusKm = 6371;
-const refreshRate = 2; // sekunden
+const refreshRate = 1; // sekunden
 class Driver extends EventEmitter {
     constructor(driverId) {
         super();
@@ -24,7 +238,7 @@ class Driver extends EventEmitter {
             mLatitude: 0,
             mLongitude: 0,
             mProvider: "fused",
-            mSpeed: 40.0, //km/h
+            mSpeed: 100.0, //km/h
             mSpeedAccuracyMetersPerSecond: 0.0,
             mTime: 0,
             mVerticalAccuracyMeters: 0.0
@@ -45,9 +259,9 @@ class Driver extends EventEmitter {
         };
         this.driverId = driverId;
         this.vehicleInfo = {
-            registration_certificate_number: "DL1LP5492",
-            vehicle_class: "Cargo Van XL",
-            vehicle_model: "MARUTI EECO"
+            registration_certificate_number: Math.random().toString(36).substring(10),
+            vehicle_class: "",
+            vehicle_model: ""
         };
         this.orderId = driverId;
         this.client;
@@ -59,6 +273,28 @@ class Driver extends EventEmitter {
         this.driveBack = false;
         this.next;
         this.calc = false;
+    }
+    setVehicleClass(data_class) {
+        this.vehicleInfo.vehicle_class = data_class;
+        switch (data_class) {
+            case "van":
+                this.vehicleInfo.vehicle_model = "GMC Vandura";
+                break;
+            case "car":
+                this.vehicleInfo.vehicle_model = "VM Golf";
+                break;
+            case "motorcycle":
+                this.vehicleInfo.vehicle_model = "Dirtbike Cross";
+                break;
+            case "truck":
+                this.vehicleInfo.vehicle_model = "TAMIYA 56354";
+                break;
+            case "truck-pickup":
+                this.vehicleInfo.vehicle_model = "Dodge Ram";
+                break;
+        }
+        this.city = myArray[Math.floor(Math.random() * myArray.length)];
+
     }
 
     sendMydata() {
@@ -150,7 +386,7 @@ class Driver extends EventEmitter {
 
     checkIfNextPointIsClose(lat1, lon1, lat2, lon2) {
         this.locationInfo.mBearing = this.getBearing(lat1, lon1, lat2, lon2);
-
+        console.log(`Bearing: <${this.locationInfo.mBearing}> Driver: <${this.driverId}>`);
         let distance = this.locationInfo.mSpeed / 3600 * refreshRate;
 
         if (this.distanceInKmBetweenEarthCoordinates(lat1, lon1, lat2, lon2) > distance) {
