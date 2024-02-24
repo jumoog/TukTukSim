@@ -1,7 +1,8 @@
 import EventEmitter from 'events';
-import mqtt from 'mqtt';
+import mqtt, { MqttClient } from 'mqtt';
 import convert from 'xml-js';
-import fs from 'node:fs';
+import fs from 'node:fs'
+
 const options = {
     ignoreComment: true,
     ignoreDeclaration: true,
@@ -220,26 +221,42 @@ const myArray = ["Kavaratti",
     "Cuddalore",
     "Dindigul"
 ];
+
 const earthRadiusKm = 6371;
-const refreshRate = 1;
+const refreshRate = 1; // sekunden
+
 export class Driver extends EventEmitter {
-    locationInfo;
-    appInfo;
-    city;
-    batteryInfo;
-    driverId;
-    vehicleInfo;
-    orderId;
-    client;
-    connected;
-    track;
-    loopId;
-    seqId;
-    tripDistance;
-    driveBack;
-    next;
-    calc;
-    constructor(driverId) {
+    locationInfo: {
+        mAccuracy: number;
+        mAltitude: number;
+        mBearing: number;
+        mBearingAccuracyDegrees: number;
+        mElapsedRealtimeNanos: number;
+        mGeoPoint: string;
+        mLatitude: number;
+        mLongitude: number;
+        mProvider: string;
+        mSpeed: number; //km/h
+        mSpeedAccuracyMetersPerSecond: number;
+        mTime: number;
+        mVerticalAccuracyMeters: number;
+    };
+    appInfo: { appCode: string; appVersion: string; };
+    city: string;
+    batteryInfo: { LastChargingPluggedDateTime: string; LastChargingUnPluggedDateTime: string; batteryLevel: number; chargingStatus: boolean; significantLevel: string; significantLowLevelDateTime: string; significantOkayLevelDateTime: string; };
+    driverId: number;
+    vehicleInfo: { registration_certificate_number: string; vehicle_class: string; vehicle_model: string; };
+    orderId: number;
+    client: MqttClient | undefined;
+    connected: boolean;
+    track: any;
+    loopId: number;
+    seqId: number;
+    tripDistance: number;
+    driveBack: boolean;
+    next: any;
+    calc: boolean;
+    constructor(driverId: number) {
         super();
         this.locationInfo = {
             mAccuracy: 1.0,
@@ -251,7 +268,7 @@ export class Driver extends EventEmitter {
             mLatitude: 0,
             mLongitude: 0,
             mProvider: "fused",
-            mSpeed: 100.0,
+            mSpeed: 100.0, //km/h
             mSpeedAccuracyMetersPerSecond: 0.0,
             mTime: 0,
             mVerticalAccuracyMeters: 0.0
@@ -287,7 +304,8 @@ export class Driver extends EventEmitter {
         this.next;
         this.calc = false;
     }
-    setVehicleClass(data_class) {
+
+    setVehicleClass(data_class: string) {
         this.vehicleInfo.vehicle_class = data_class;
         switch (data_class) {
             case "van":
@@ -307,24 +325,35 @@ export class Driver extends EventEmitter {
                 break;
         }
         this.city = myArray[Math.floor(Math.random() * myArray.length)];
+
     }
+
     sendMydata() {
+        // increment seqId
         this.seqId++;
+
         if (this.seqId > 1) {
             this.next = this.checkIfNextPointIsClose(this.locationInfo.mLatitude, this.locationInfo.mLongitude, parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat), parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon));
             let calc = this.distanceInKmBetweenEarthCoordinates(this.locationInfo.mLatitude, this.locationInfo.mLongitude, this.next.mLatitude, this.next.mLongitude);
             this.tripDistance = this.tripDistance + calc;
             console.log(`Distance: <${calc}> KM / TripDistance: <${this.tripDistance}>`);
+            // set next Latitude
             this.locationInfo.mLatitude = this.next.mLatitude;
+            // set next Longitude
             this.locationInfo.mLongitude = this.next.mLongitude;
-        }
-        else {
+        } else {
+            // set next Latitude
             this.locationInfo.mLatitude = parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lat);
+            // set next Longitude
             this.locationInfo.mLongitude = parseFloat(this.track.gpx.trk.trkseg.trkpt[this.loopId]._attributes.lon);
         }
+
+        // set current unix time in milliseconds
         this.locationInfo.mTime = Date.now();
         let timeNow = new Date().toISOString();
+
         console.log(`Latitude: <${this.locationInfo.mLatitude}> Longitude: <${this.locationInfo.mLongitude}> Driver: <${this.driverId}>`);
+        // construct a message
         let message = {
             appInfo: this.appInfo,
             city: this.city,
@@ -349,50 +378,51 @@ export class Driver extends EventEmitter {
                 if (!this.calc) {
                     this.loopId--;
                 }
-            }
-            else {
+            } else {
                 this.driveBack = false;
             }
-        }
-        else if (this.loopId !== this.track.gpx.trk.trkseg.trkpt.length - 1 && !this.driveBack) {
+        } else if (this.loopId !== this.track.gpx.trk.trkseg.trkpt.length - 1 && !this.driveBack) {
             if (!this.calc) {
                 this.loopId++;
             }
-        }
-        else {
+        } else {
             this.driveBack = true;
         }
         return JSON.stringify(message);
     }
+
     connect() {
         if (!this.connected) {
             this.connected = true;
             this.client = mqtt.connect('mqtt://broker.hivemq.com');
             this.client.on('connect', () => {
-                this.sendInterval();
+                this.sendInterval()
             });
         }
     }
-    loadtrack(file) {
+
+    loadtrack(file: string) {
         let xml = fs.readFileSync(file, 'utf8');
         this.track = convert.xml2js(xml, options);
         console.log(`loaded track: ${this.track.gpx.trk.name._text}`);
         this.connect();
     }
+
     async sendInterval() {
         this.client?.publish(`innovis/driver/${this.driverId}`, this.sendMydata());
         setTimeout(() => this.sendInterval(), refreshRate * 1000);
     }
-    checkIfNextPointIsClose(lat1, lon1, lat2, lon2) {
+
+    checkIfNextPointIsClose(lat1: number, lon1: number, lat2: number, lon2: number) {
         this.locationInfo.mBearing = this.getBearing(lat1, lon1, lat2, lon2);
         console.log(`Bearing: <${this.locationInfo.mBearing}> Driver: <${this.driverId}>`);
         let distance = this.locationInfo.mSpeed / 3600 * refreshRate;
+
         if (this.distanceInKmBetweenEarthCoordinates(lat1, lon1, lat2, lon2) > distance) {
             console.log(`Slow down Driver: <${this.driverId}>`);
             this.calc = true;
             return this.calculateNewPostionFromBearingDistance(lat1, lon1, this.locationInfo.mBearing, distance);
-        }
-        else {
+        } else {
             this.calc = false;
             return {
                 mLatitude: lat2,
@@ -400,13 +430,16 @@ export class Driver extends EventEmitter {
             };
         }
     }
-    toRadians(degrees) {
+
+    toRadians(degrees: number) {
         return degrees * Math.PI / 180;
     }
-    toDegrees(radians) {
+
+    toDegrees(radians: number) {
         return radians * 180 / Math.PI;
     }
-    distanceInKmBetweenEarthCoordinates(lat1, lon1, lat2, lon2) {
+
+    distanceInKmBetweenEarthCoordinates(lat1: number, lon1: number, lat2: number, lon2: number) {
         let dLat = this.toRadians(lat2 - lat1);
         let dLon = this.toRadians(lon2 - lon1);
         lat1 = this.toRadians(lat1);
@@ -416,7 +449,8 @@ export class Driver extends EventEmitter {
         let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return earthRadiusKm * c;
     }
-    getBearing(startLat, startLong, endLat, endLong) {
+
+    getBearing(startLat: number, startLong: number, endLat: number, endLong: number) {
         startLat = this.toRadians(startLat);
         startLong = this.toRadians(startLong);
         endLat = this.toRadians(endLat);
@@ -431,7 +465,8 @@ export class Driver extends EventEmitter {
         }
         return (this.toDegrees(Math.atan2(dLong, dPhi)) + 360.0) % 360.0;
     }
-    calculateNewPostionFromBearingDistance(lat, lng, bearing, distance) {
+
+    calculateNewPostionFromBearingDistance(lat: number, lng: number, bearing: number, distance: number) {
         let lat2 = Math.asin(Math.sin(Math.PI / 180 * lat) * Math.cos(distance / earthRadiusKm) + Math.cos(Math.PI / 180 * lat) * Math.sin(distance / earthRadiusKm) * Math.cos(Math.PI / 180 * bearing));
         let lon2 = Math.PI / 180 * lng + Math.atan2(Math.sin(Math.PI / 180 * bearing) * Math.sin(distance / earthRadiusKm) * Math.cos(Math.PI / 180 * lat), Math.cos(distance / earthRadiusKm) - Math.sin(Math.PI / 180 * lat) * Math.sin(lat2));
         return {

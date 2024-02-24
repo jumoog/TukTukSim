@@ -1,4 +1,10 @@
 import { Driver } from "./Driver.js";
+//"van"
+//"car"
+//"motorcycle"
+//"truck"
+//"truck-pickup"
+
 const DriverA = new Driver(1);
 DriverA.setVehicleClass("van");
 DriverA.loadtrack('track4.gpx');

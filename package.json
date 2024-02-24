@@ -2,12 +2,15 @@
   "name": "tuktuksim",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "App.js",
   "dependencies": {
-    "mqtt": "^2.18.8",
-    "xml-js": "^1.6.8"
+    "mqtt": "^5.3.5",
+    "xml-js": "^1.6.11"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.11.20"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
