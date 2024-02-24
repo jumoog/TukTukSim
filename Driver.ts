@@ -1,4 +1,3 @@
-import EventEmitter from 'events';
 import mqtt, { MqttClient } from 'mqtt';
 import convert from 'xml-js';
 import fs from 'node:fs'
@@ -225,7 +224,7 @@ const myArray = ["Kavaratti",
 const earthRadiusKm = 6371;
 const refreshRate = 1; // sekunden
 
-export class Driver extends EventEmitter {
+export class Driver {
     locationInfo: {
         mAccuracy: number;
         mAltitude: number;
@@ -257,7 +256,6 @@ export class Driver extends EventEmitter {
     next: any;
     calc: boolean;
     constructor(driverId: number) {
-        super();
         this.locationInfo = {
             mAccuracy: 1.0,
             mAltitude: 0.0,

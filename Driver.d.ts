@@ -1,7 +1,5 @@
-/// <reference types="node" />
-import EventEmitter from 'events';
 import { MqttClient } from 'mqtt';
-export declare class Driver extends EventEmitter {
+export declare class Driver {
     locationInfo: {
         mAccuracy: number;
         mAltitude: number;
